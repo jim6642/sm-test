@@ -72,8 +72,6 @@
   .dim-item .dim-fill { height: 100%; border-radius: 3px; transition: width 1.5s ease; }
   .dim-item .dim-value { font-size: 13px; font-weight: 600; }
   .result-actions { display: flex; gap: 10px; margin-bottom: 14px; justify-content: center; }
-  .share-btn { pointer-events: auto; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 10px 22px; border-radius: 50px; font-size: 14px; cursor: pointer; transition: all 0.3s; letter-spacing: 1px; }
-  .share-btn:hover { background: rgba(255,255,255,0.1); }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   .result-radar-wrap { width: 260px; height: 260px; margin: 12px auto; position: relative; }
   #radarChart { width: 100%; height: 100%; }
@@ -85,7 +83,23 @@
   .dim-item .dim-value { font-size: 14px; font-weight: 600; }
   .share-btn { pointer-events: auto; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 10px 24px; border-radius: 50px; font-size: 14px; cursor: pointer; transition: all 0.3s; letter-spacing: 1px; }
   .share-btn:hover { background: rgba(255,255,255,0.1); }
-  .result-actions { display: flex; gap: 12px; margin-bottom: 16px; }
+  /* AI 分析 */
+  .ai-section { margin-top: 16px; text-align: center; max-width: 420px; }
+  .ai-input { width: 260px; padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: #fff; font-size: 13px; text-align: center; margin-bottom: 8px; outline: none; }
+  .ai-input:focus { border-color: rgba(255,255,255,0.25); }
+  .ai-input::placeholder { color: rgba(255,255,255,0.25); }
+  .ai-key-hint { font-size: 11px; opacity: 0.35; margin-bottom: 8px; }
+  .ai-key-hint a { color: #5dade2; opacity: 0.8; }
+  .ai-btn { pointer-events: auto; background: rgba(94,53,177,0.3); border: 1px solid rgba(149,117,205,0.3); color: #fff; padding: 10px 22px; border-radius: 50px; font-size: 14px; cursor: pointer; transition: all 0.3s; letter-spacing: 1px; }
+  .ai-btn:hover { background: rgba(94,53,177,0.5); }
+  .ai-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ai-loading { display: none; text-align: center; margin-top: 10px; }
+  .ai-loading.active { display: block; }
+  .ai-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.15); border-top-color: #9b59b6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ai-result { display: none; text-align: left; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; margin-top: 14px; max-height: 240px; overflow-y: auto; font-size: 13px; line-height: 1.7; opacity: 0; transition: opacity 0.5s; }
+  .ai-result.active { display: block; opacity: 1; }
+  .ai-result p { margin-bottom: 8px; opacity: 0.8; }
   .result-icon { font-size: 72px; margin-bottom: 8px; }
   .result-title { font-size: 34px; font-weight: 800; margin-bottom: 6px; }
   .result-desc { font-size: 15px; opacity: 0.55; max-width: 420px; text-align: center; line-height: 1.7; margin-bottom: 24px; }
@@ -174,7 +188,14 @@
     <div class="result-stat"><div class="result-stat-value" id="statSkip">0</div><div class="result-stat-label">跳过</div></div>
     <div class="result-stat"><div class="result-stat-value" id="statTotal">23</div><div class="result-stat-label">总题数</div></div>
   </div>
-  <div class="result-actions"><button class="share-btn" onclick="shareResult()">📤 分享结果</button><div class="result-actions"><button class="share-btn" onclick="shareResult()">📤 分享结果</button><button class="btn-restart" onclick="restart()">重新测试</button></div></div>
+    <div class="ai-section" id="aiSection">
+    <input class="ai-input" id="aiKey" type="password" placeholder="输入 OpenRouter API Key" onchange="saveApiKey()" />
+    <div class="ai-key-hint">免费注册 <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> 获取 Key</div>
+    <button class="ai-btn" id="aiBtn" onclick="runAiAnalysis()">🤖 AI 深度分析</button>
+    <div class="ai-loading" id="aiLoading"><span class="ai-spinner"></span><br/><small style="opacity:0.4">AI 正在分析你的选择模式...</small></div>
+    <div class="ai-result" id="aiResult"></div>
+  </div>
+  <div class="result-actions"><button class="share-btn" onclick="shareResult()">📤 分享结果</button><button class="btn-restart" onclick="restart()">重新测试</button></div>
 </div>
 <button class="btn-small-restart" onclick="restart()">↻ 重新测试</button>
 
@@ -467,7 +488,76 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 's' || e.key === 'S') skipQuestion();
   else if (e.key === 'r' || e.key === 'R') restart();
 });
-buildTierLabels(); updateQuestion(); updateProgress();
+
+// ===== AI 分析 =====
+function saveApiKey() {
+  const key = document.getElementById('aiKey').value.trim();
+  if (key) localStorage.setItem('sm_ai_key', key);
+}
+
+function loadApiKey() {
+  const saved = localStorage.getItem('sm_ai_key');
+  if (saved) document.getElementById('aiKey').value = saved;
+}
+
+async function runAiAnalysis() {
+  const key = document.getElementById('aiKey').value.trim();
+  if (!key) { alert('请先输入 OpenRouter API Key'); return; }
+  saveApiKey();
+
+  const btn = document.getElementById('aiBtn');
+  const loader = document.getElementById('aiLoading');
+  const resultEl = document.getElementById('aiResult');
+  btn.disabled = true;
+  loader.classList.add('active');
+  resultEl.classList.remove('active');
+  resultEl.innerHTML = '';
+
+  // Build analysis data
+  const total = QUESTIONS.length;
+  let detail = [];
+  for (let i = 0; i < total; i++) {
+    const q = QUESTIONS[i];
+    const a = answeredIdx[i] === 's' ? 'S' : answeredIdx[i] === 'm' ? 'M' : '跳过';
+    detail.push(a + ': ' + q.text + ' (' + q.left + ' / ' + q.right + ')');
+  }
+  const prompt = '你是一个专业的BDSM取向分析专家。以下是一位用户在SM取向测试中的详细答题记录：' + detail.join('; ') + '。\n\n总统计：S回答 ' + sCount + '次，M回答 ' + (answered - sCount) + '次，跳过 ' + skipCount + '次。\n\n请用中文写一段200字以内的个性化分析，要点：1) 从回答模式推断用户的心理倾向特点 2) 指出最突出的维度偏好（如物理类/心理类/束缚感官类/极限猎奇类）3) 如果跳过了很多题目说明什么 4) 一句建议性总结。语气专业但温暖。不要格式标签，只要纯文本段落。';
+
+  try {
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + key,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'SM Orientation Test'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'API 请求失败 (' + resp.status + ')');
+    }
+
+    const data = await resp.json();
+    const text = data.choices[0].message.content;
+    resultEl.innerHTML = '<p>' + text.replace(/\n/g, '<br/>') + '</p>';
+    resultEl.classList.add('active');
+  } catch (e) {
+    resultEl.innerHTML = '<p style=color:#e74c3c>' + e.message + '</p>';
+    resultEl.classList.add('active');
+  } finally {
+    btn.disabled = false;
+    loader.classList.remove('active');
+  }
+}
+
+loadApiKey(); buildTierLabels(); updateQuestion(); updateProgress();
 </script>
 </body>
 </html>
