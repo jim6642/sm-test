@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SM 取向测试</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    background: #1a1a2e;
+    color: #fff;
+    user-select: none;
+  }
+
+  .container {
+    display: flex;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* 左右半屏 */
+  .half {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: flex 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .half::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.08;
+    background-image: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.15) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .half-left {
+    background: linear-gradient(135deg, #8b1a4a 0%, #c0392b 50%, #e74c3c 100%);
+  }
+  .half-right {
+    background: linear-gradient(135deg, #1a3a6b 0%, #2c3e80 50%, #34495e 100%);
+  }
+  /* 选择后动画伸缩 */
+  .half.chosen-left { flex: 1.15; }
+  .half.chosen-right { flex: 1.15; }
+
+  .option-content {
+    text-align: center;
+    z-index: 2;
+    opacity: 0.85;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .half:hover .option-content {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  .option-icon {
+    font-size: 56px;
+    margin-bottom: 12px;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+  }
+  .option-label {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .option-sub {
+    font-size: 13px;
+    opacity: 0.6;
+    margin-top: 6px;
+    letter-spacing: 4px;
+  }
+
+  /* S / M 角标 */
+  .badge {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 180px;
+    font-weight: 900;
+    opacity: 0.06;
+    pointer-events: none;
+    letter-spacing: -8px;
+  }
+  .badge-left { right: -20px; }
+  .badge-right { left: -20px; }
+
+  /* 进度条区域 */
+  .top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 20px 30px 10px;
+    background: linear-gradient(180deg, rgba(26,26,46,0.92) 0%, rgba(26,26,46,0) 100%);
+    pointer-events: none;
+  }
+  .progress-wrapper {
+    position: relative;
+    height: 10px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 10px;
+    overflow: visible;
+  }
+  .progress-track {
+    height: 100%;
+    width: 50%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #e74c3c, #f39c12, #f1c40f, #3498db, #2c3e80);
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+  .progress-center-marker {
+    position: absolute;
+    left: 50%;
+    top: -5px;
+    width: 3px;
+    height: 20px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    transform: translateX(-50%);
+  }
+  .progress-indicator {
+    position: absolute;
+    top: -8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 20px rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.3);
+    transition: left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 13px;
+    opacity: 0.5;
+    letter-spacing: 2px;
+  }
+
+  /* 题目区域 */
+  .question-area {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    text-align: center;
+    pointer-events: none;
+  }
+  .question-card {
+    background: rgba(26,26,46,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 28px 48px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    pointer-events: auto;
+    animation: cardIn 0.5s ease-out;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .question-number {
+    font-size: 13px;
+    opacity: 0.4;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  .question-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .question-text {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .question-hint {
+    font-size: 14px;
+    opacity: 0.4;
+  }
+
+  /* 结果页面 */
+  .result-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26,26,46,0.92);
+    backdrop-filter: blur(12px);
+    animation: fadeIn 1s ease-out;
+  }
+  .result-overlay.active { display: flex; }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .result-meter {
+    width: 80%;
+    max-width: 500px;
+    height: 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.1);
+    margin: 30px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-meter-fill {
+    height: 100%;
+    border-radius: 12px;
+    transition: width 2s cubic-bezier(0.22, 1, 0.36, 1);
+    background: linear-gradient(90deg, #e74c3c, #f39c12, #f1c40f, #3498db, #2c3e80);
+  }
+  .result-icon { font-size: 80px; margin-bottom: 10px; }
+  .result-title {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .result-desc {
+    font-size: 16px;
+    opacity: 0.6;
+    max-width: 400px;
+    text-align: center;
+    line-height: 1.7;
+    margin-bottom: 30px;
+  }
+  .result-stats {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 30px;
+  }
+  .result-stat {
+    text-align: center;
+  }
+  .result-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+  }
+  .result-stat-label {
+    font-size: 13px;
+    opacity: 0.5;
+    margin-top: 4px;
+  }
+  .btn-restart {
+    pointer-events: auto;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    padding: 12px 36px;
+    border-radius: 50px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 2px;
+  }
+  .btn-restart:hover {
+    background: rgba(255,255,255,0.15);
+    transform: scale(1.05);
+  }
+
+  /* 重新开始按钮（测试中） */
+  .btn-small-restart {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 90;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.4);
+    padding: 6px 18px;
+    border-radius: 50px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+    pointer-events: auto;
+  }
+  .btn-small-restart:hover {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* 响应式 */
+  @media (max-width: 640px) {
+    .question-card { padding: 24px 28px; margin: 0 16px; }
+    .question-text { font-size: 22px; }
+    .option-label { font-size: 18px; }
+    .option-icon { font-size: 40px; }
+    .badge { font-size: 100px; }
+    .progress-labels { font-size: 11px; }
+    .top-bar { padding: 16px 16px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <!-- 左半屏 S -->
+  <div class="half half-left" id="leftHalf" onclick="choose('left')">
+    <div class="badge badge-left">S</div>
+    <div class="option-content">
+      <span class="option-icon" id="leftIcon">👑</span>
+      <div class="option-label" id="leftLabel">看别人带</div>
+      <div class="option-sub">S 倾向</div>
+    </div>
+  </div>
+
+  <!-- 右半屏 M -->
+  <div class="half half-right" id="rightHalf" onclick="choose('right')">
+    <div class="badge badge-right">M</div>
+    <div class="option-content">
+      <span class="option-icon" id="rightIcon">🔗</span>
+      <div class="option-label" id="rightLabel">给自己带</div>
+      <div class="option-sub">M 倾向</div>
+    </div>
+  </div>
+</div>
+
+<!-- 顶部进度条 -->
+<div class="top-bar">
+  <div class="progress-wrapper">
+    <div class="progress-center-marker"></div>
+    <div class="progress-track" id="progressTrack" style="width:50%"></div>
+    <div class="progress-indicator" id="progressDot" style="left:50%">·</div>
+  </div>
+  <div class="progress-labels">
+    <span>支配 · S</span>
+    <span>顺从 · M</span>
+  </div>
+</div>
+
+<!-- 题目卡片 (居中) -->
+<div class="question-area" id="questionArea">
+  <div class="question-card" id="questionCard">
+    <div class="question-number" id="qNumber">1 / 12</div>
+    <span class="question-icon" id="qIcon">😶</span>
+    <div class="question-text" id="qText">口球？</div>
+    <div class="question-hint">选择一个方向</div>
+  </div>
+</div>
+
+<!-- 结果页面 -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-icon" id="resultIcon">⚖️</div>
+  <div class="result-title" id="resultTitle">测试结果</div>
+  <div class="result-desc" id="resultDesc">你的取向分析</div>
+  <div class="result-meter">
+    <div class="result-meter-fill" id="resultMeter" style="width:50%"></div>
+  </div>
+  <div class="result-stats">
+    <div class="result-stat">
+      <div class="result-stat-value" id="statS">0</div>
+      <div class="result-stat-label">S 回答</div>
+    </div>
+    <div class="result-stat">
+      <div class="result-stat-value" id="statM">0</div>
+      <div class="result-stat-label">M 回答</div>
+    </div>
+    <div class="result-stat">
+      <div class="result-stat-value" id="statTotal">12</div>
+      <div class="result-stat-label">总题数</div>
+    </div>
+  </div>
+  <button class="btn-restart" onclick="restart()">重新测试</button>
+</div>
+
+<button class="btn-small-restart" onclick="restart()">↻ 重新测试</button>
+
+<script>
+// ============ 题库 ============
+const QUESTIONS = [
+  { icon: '😶',  text: '口球？',        left: '看别人带',  right: '给自己带' },
+  { icon: '🕯️',  text: '蜡烛？',        left: '滴别人',    right: '被滴' },
+  { icon: '🪢',  text: '绳子？',        left: '绑别人',    right: '被绑' },
+  { icon: '🦯',  text: '皮鞭？',        left: '挥鞭子',    right: '挨鞭子' },
+  { icon: '🎭',  text: '眼罩？',        left: '给别人戴',  right: '给自己戴' },
+  { icon: '⛓️',  text: '手铐？',        left: '铐别人',    right: '被铐' },
+  { icon: '📢',  text: '指令感？',      left: '发号施令',  right: '听从指令' },
+  { icon: '🎪',  text: '角色扮演？',    left: '扮演主人',  right: '扮演仆从' },
+  { icon: '🎯',  text: '快感控制？',    left: '掌控他人',  right: '被掌控' },
+  { icon: '🗣️',  text: '言语交流？',    left: '主导对话',  right: '被引导' },
+  { icon: '✋',  text: '拍打？',        left: '拍别人',    right: '被拍' },
+  { icon: '🧎',  text: '服从中',        left: '让他人服从', right: '服从他人' },
+];
+
+// ============ 状态 ============
+let currentIndex = 0;
+let sCount = 0;      // S 回答计数
+let animated = false; // 动画锁
+
+function updateQuestion() {
+  const q = QUESTIONS[currentIndex];
+  document.getElementById('qNumber').textContent = `${currentIndex + 1} / ${QUESTIONS.length}`;
+  document.getElementById('qIcon').textContent = q.icon;
+  document.getElementById('qText').textContent = q.text;
+  document.getElementById('leftLabel').textContent = q.left;
+  document.getElementById('rightLabel').textContent = q.right;
+
+  // 更新 icon 视觉提示
+  const sIcons = ['👑','🔥','⚔️','🦾','🎪','✋'];
+  const mIcons = ['🔗','💫','🌙','🫂','🧎','🎭'];
+  document.getElementById('leftIcon').textContent = sIcons[currentIndex % sIcons.length];
+  document.getElementById('rightIcon').textContent = mIcons[currentIndex % mIcons.length];
+
+  // 重播卡片动画
+  const card = document.getElementById('questionCard');
+  card.style.animation = 'none';
+  card.offsetHeight; // reflow
+  card.style.animation = 'cardIn 0.5s ease-out';
+}
+
+function updateProgress() {
+  const total = QUESTIONS.length;
+  // 0% = 全 S (最左), 50% = 中间, 100% = 全 M (最右)
+  const mCount = currentIndex - sCount;  // 已答题目中 M 的数量
+  const answered = currentIndex;          // 已答题目数
+  const pct = answered === 0 ? 50 : 50 + ((mCount - sCount) / answered) * 50;
+  const dot = document.getElementById('progressDot');
+  const track = document.getElementById('progressTrack');
+  track.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  dot.style.left = Math.max(0, Math.min(100, pct)) + '%';
+  // 进度点文字
+  if (pct > 55) dot.textContent = 'M';
+  else if (pct < 45) dot.textContent = 'S';
+  else dot.textContent = '·';
+}
+
+function choose(side) {
+  if (animated) return;
+  animated = true;
+
+  const total = QUESTIONS.length;
+
+  if (side === 'left') {
+    sCount++;
+  }
+
+  // 半屏动画
+  const leftEl = document.getElementById('leftHalf');
+  const rightEl = document.getElementById('rightHalf');
+  if (side === 'left') {
+    leftEl.classList.add('chosen-left');
+    rightEl.classList.remove('chosen-right');
+  } else {
+    rightEl.classList.add('chosen-right');
+    leftEl.classList.remove('chosen-left');
+  }
+
+  // 更新进度
+  updateProgress();
+
+  // 进入下一题或结果
+  setTimeout(() => {
+    // 清除半屏高亮
+    leftEl.classList.remove('chosen-left');
+    rightEl.classList.remove('chosen-right');
+
+    currentIndex++;
+    if (currentIndex >= total) {
+      showResult();
+    } else {
+      updateQuestion();
+    }
+    animated = false;
+  }, 500);
+}
+
+function showResult() {
+  const total = QUESTIONS.length;
+  const sRatio = sCount / total;
+  const mCount = total - sCount;
+
+  // 填充结果 meter
+  const pct = (sRatio * 100);
+  document.getElementById('resultMeter').style.width = pct + '%';
+
+  // 统计
+  document.getElementById('statS').textContent = sCount;
+  document.getElementById('statM').textContent = mCount;
+  document.getElementById('statTotal').textContent = total;
+
+  // 判定
+  let icon, title, desc;
+  if (sRatio >= 0.80) {
+    icon = '👑';
+    title = '纯粹支配者';
+    desc = '你有强烈的支配倾向，享受掌控与主导的感觉。你的气场强大，是天生的领导者。在关系中你更喜欢处于主动地位，制定规则并让对方遵循。';
+  } else if (sRatio >= 0.60) {
+    icon = '⚔️';
+    title = '倾向 S 属性';
+    desc = '你偏向支配者一方，喜欢在互动中占据主导。你有控制欲但并不极端，享受引导对方的过程，也能在适当范围内探索控制与服从的边界。';
+  } else if (sRatio >= 0.40) {
+    icon = '⚖️';
+    title = '均衡型 · Switch';
+    desc = '你是灵活的 Switch 类型，既能在支配中找到乐趣，也能在服从中获得满足。你根据对象和情境自然切换角色，拥有丰富的感受力和适应力。';
+  } else if (sRatio >= 0.20) {
+    icon = '🫂';
+    title = '倾向 M 属性';
+    desc = '你偏向顺从者一方，享受被引导和被照顾的感觉。你信任对方并将自己交付出去，在服从中找到安全感和满足感。';
+  } else {
+    icon = '🌙';
+    title = '纯粹顺从者';
+    desc = '你有强烈的顺从倾向，享受将自己交付给信任的支配者。放下控制对你而言是一种解放，你在被引导的状态下感受到最深层的愉悦。';
+  }
+
+  document.getElementById('resultIcon').textContent = icon;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultDesc').textContent = desc;
+
+  document.getElementById('resultOverlay').classList.add('active');
+}
+
+function restart() {
+  currentIndex = 0;
+  sCount = 0;
+  animated = false;
+
+  // 重置进度
+  document.getElementById('progressTrack').style.width = '50%';
+  document.getElementById('progressDot').style.left = '50%';
+  document.getElementById('progressDot').textContent = '·';
+
+  // 隐藏结果
+  document.getElementById('resultOverlay').classList.remove('active');
+
+  // 重置半屏
+  document.getElementById('leftHalf').classList.remove('chosen-left');
+  document.getElementById('rightHalf').classList.remove('chosen-right');
+
+  // 重置题目
+  updateQuestion();
+}
+
+// 键盘快捷键
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') choose('left');
+  else if (e.key === 'ArrowRight') choose('right');
+  else if (e.key === 'r' || e.key === 'R') restart();
+});
+
+// ============ 启动 ============
+updateQuestion();
+updateProgress();
+</script>
+</body>
+</html>
