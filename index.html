@@ -75,7 +75,30 @@
   .btn-restart:hover { background: rgba(255,255,255,0.12); transform: scale(1.05); }
   .btn-small-restart { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 90; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.35); padding: 6px 18px; border-radius: 50px; font-size: 12px; cursor: pointer; transition: all 0.3s; letter-spacing: 1px; pointer-events: auto; }
   .btn-small-restart:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
-  @media (max-width: 640px) { .question-card { padding: 24px 24px 16px; min-width: auto; margin: 0 12px; } .question-text { font-size: 22px; } .option-label { font-size: 18px; } .option-icon { font-size: 40px; } .badge { font-size: 100px; } .top-bar { padding: 12px 12px 6px; } .tier-label { font-size: 9px; } }
+  @media (max-width: 640px) {
+  .question-card { padding: 18px 20px 14px; min-width: auto; margin: 0 10px; max-width: 85vw; }
+  .question-text { font-size: 19px; }
+  .question-icon { font-size: 32px; }
+  .question-number { font-size: 10px; }
+  .question-hint { font-size: 11px; }
+  .skip-btn { margin-top: 10px; padding: 4px 14px; font-size: 11px; }
+  .question-area { top: 55%; transform: translate(-50%, -60%); }
+  .option-label { font-size: 15px; }
+  .option-icon { font-size: 32px; }
+  .option-sub { font-size: 10px; }
+  .half { align-items: flex-end; padding-bottom: 30px; }
+  .badge { font-size: 72px; }
+  .top-bar { padding: 10px 10px 4px; }
+  .tier-label { font-size: 8px; }
+  .progress-indicator { width: 22px; height: 22px; font-size: 9px; top: -7px; }
+  .result-title { font-size: 24px; }
+  .result-desc { font-size: 13px; }
+  .result-icon { font-size: 52px; }
+  .result-stats { gap: 18px; }
+  .result-stat-value { font-size: 22px; }
+  .result-stat-label { font-size: 10px; }
+  .btn-restart { padding: 10px 28px; font-size: 14px; }
+}
 </style>
 </head>
 <body>
