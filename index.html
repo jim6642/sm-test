@@ -63,7 +63,29 @@
   .skip-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.2); }
   .result-overlay { position: fixed; inset: 0; z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(26,26,46,0.93); backdrop-filter: blur(14px); animation: fadeIn 0.8s ease-out; }
   .result-overlay.active { display: flex; }
+  .result-radar-wrap { width: 240px; height: 240px; margin: 10px auto; position: relative; }
+  #radarChart { width: 100%; height: 100%; }
+  .dim-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 360px; margin: 0 auto 12px; }
+  .dim-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 6px 12px; text-align: center; min-width: 88px; flex: 1; }
+  .dim-item .dim-label { font-size: 10px; opacity: 0.5; margin-bottom: 2px; }
+  .dim-item .dim-bar { height: 3px; border-radius: 3px; background: rgba(255,255,255,0.08); margin: 3px 0; overflow: hidden; }
+  .dim-item .dim-fill { height: 100%; border-radius: 3px; transition: width 1.5s ease; }
+  .dim-item .dim-value { font-size: 13px; font-weight: 600; }
+  .result-actions { display: flex; gap: 10px; margin-bottom: 14px; justify-content: center; }
+  .share-btn { pointer-events: auto; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 10px 22px; border-radius: 50px; font-size: 14px; cursor: pointer; transition: all 0.3s; letter-spacing: 1px; }
+  .share-btn:hover { background: rgba(255,255,255,0.1); }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .result-radar-wrap { width: 260px; height: 260px; margin: 12px auto; position: relative; }
+  #radarChart { width: 100%; height: 100%; }
+  .dim-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 380px; margin: 0 auto 16px; }
+  .dim-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 8px 14px; text-align: center; min-width: 100px; flex: 1; }
+  .dim-item .dim-label { font-size: 11px; opacity: 0.5; margin-bottom: 2px; }
+  .dim-item .dim-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,0.08); margin: 4px 0; overflow: hidden; }
+  .dim-item .dim-fill { height: 100%; border-radius: 4px; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1); }
+  .dim-item .dim-value { font-size: 14px; font-weight: 600; }
+  .share-btn { pointer-events: auto; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 10px 24px; border-radius: 50px; font-size: 14px; cursor: pointer; transition: all 0.3s; letter-spacing: 1px; }
+  .share-btn:hover { background: rgba(255,255,255,0.1); }
+  .result-actions { display: flex; gap: 12px; margin-bottom: 16px; }
   .result-icon { font-size: 72px; margin-bottom: 8px; }
   .result-title { font-size: 34px; font-weight: 800; margin-bottom: 6px; }
   .result-desc { font-size: 15px; opacity: 0.55; max-width: 420px; text-align: center; line-height: 1.7; margin-bottom: 24px; }
@@ -144,17 +166,21 @@
   <div class="result-icon" id="resultIcon">⚖️</div>
   <div class="result-title" id="resultTitle">测试结果</div>
   <div class="result-desc" id="resultDesc">你的取向分析</div>
+  <div class="result-radar-wrap"><canvas id="radarChart" width="240" height="240"></canvas></div>
+  <div class="dim-grid" id="dimGrid"></div>
   <div class="result-stats">
     <div class="result-stat"><div class="result-stat-value" id="statS">0</div><div class="result-stat-label">S 回答</div></div>
     <div class="result-stat"><div class="result-stat-value" id="statM">0</div><div class="result-stat-label">M 回答</div></div>
     <div class="result-stat"><div class="result-stat-value" id="statSkip">0</div><div class="result-stat-label">跳过</div></div>
     <div class="result-stat"><div class="result-stat-value" id="statTotal">23</div><div class="result-stat-label">总题数</div></div>
   </div>
-  <button class="btn-restart" onclick="restart()">重新测试</button>
+  <div class="result-actions"><button class="share-btn" onclick="shareResult()">📤 分享结果</button><div class="result-actions"><button class="share-btn" onclick="shareResult()">📤 分享结果</button><button class="btn-restart" onclick="restart()">重新测试</button></div></div>
 </div>
 <button class="btn-small-restart" onclick="restart()">↻ 重新测试</button>
 
 <script>
+
+
 const QUESTIONS = [
   { icon: '😶',  text: '口球？',        left: '看别人带',  right: '给自己带' },
   { icon: '🎭',  text: '眼罩？',        left: '给别人戴',  right: '给自己戴' },
@@ -180,6 +206,19 @@ const QUESTIONS = [
   { icon: '🩸',  text: '穿刺？',        left: '穿刺别人',  right: '被穿刺' },
   { icon: '🧠',  text: '催眠控制？',    left: '催眠别人',  right: '被催眠' },
 ];
+
+const Q_DIMS = [
+  'bind','bind','bind','bind','psych','psych',
+  'bind','bind','phys','phys','psych','psych',
+  'phys','bind','phys','phys','ext',
+  'ext','ext','phys','ext','ext','ext','psych'
+];
+const DIMENSIONS = [
+  { key:'phys', label:'物理强度', color:'#e67e22' },
+  { key:'bind', label:'束缚感官', color:'#2ecc71' },
+  { key:'psych', label:'心理控制', color:'#9b59b6' },
+  { key:'ext', label:'极限猎奇', color:'#e056a0' },
+];
 const TIERS = [
   { pct: 6.25,  label: '极致 S',  side: 's' },
   { pct: 18.75, label: '重度 S',  side: 's' },
@@ -192,6 +231,8 @@ const TIERS = [
   { pct: 93.75, label: '极致 M',  side: 'm' },
 ];
 let currentIndex = 0, sCount = 0, skipCount = 0, answered = 0, animated = false;
+let answeredIdx = [];
+let skippedSet = new Set();
   document.getElementById('dimLeft').style.opacity = '0'; document.getElementById('dimRight').style.opacity = '0';
 
 function buildTierLabels() {
@@ -246,7 +287,8 @@ function updateProgress() {
 function choose(side) {
   if (animated || currentIndex >= QUESTIONS.length) return;
   animated = true;
-  if (side === 'left') sCount++;
+  if (side === 'left') { sCount++; answeredIdx[currentIndex] = 's'; }
+  else { answeredIdx[currentIndex] = 'm'; }
   answered++;
   const leftEl = document.getElementById('leftHalf'), rightEl = document.getElementById('rightHalf');
   if (side === 'left') { leftEl.classList.add('chosen-left'); rightEl.classList.remove('chosen-right'); }
@@ -259,8 +301,120 @@ function choose(side) {
 }
 function skipQuestion() {
   if (animated || currentIndex >= QUESTIONS.length) return;
-  animated = true; skipCount++;
+  animated = true; skipCount++; skippedSet.add(currentIndex);
   currentIndex++; animated = false; updateQuestion();
+}
+
+function renderRadar(dimScores) {
+  const canvas = document.getElementById('radarChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = 240, H = 240, cx = W/2, cy = H/2, R = 90;
+  ctx.clearRect(0, 0, W, H);
+
+  const dims = DIMENSIONS;
+  const count = dims.length;
+  const angleStep = (Math.PI * 2) / count;
+  const startAngle = -Math.PI / 2;
+
+  // Grid rings
+  for (let ring = 1; ring <= 4; ring++) {
+    const r = (R / 4) * ring;
+    ctx.beginPath();
+    for (let i = 0; i <= count; i++) {
+      const angle = startAngle + i * angleStep;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axis lines + labels
+  for (let i = 0; i < count; i++) {
+    const angle = startAngle + i * angleStep;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + R * Math.cos(angle), cy + R * Math.sin(angle));
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.stroke();
+
+    const lx = cx + (R + 20) * Math.cos(angle);
+    const ly = cy + (R + 20) * Math.sin(angle);
+    ctx.fillStyle = dims[i].color;
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(dims[i].label, lx, ly);
+  }
+
+  // Data polygon
+  ctx.beginPath();
+  for (let i = 0; i <= count; i++) {
+    const di = i % count;
+    const dk = dims[di].key;
+    const total = dimScores[dk].s + dimScores[dk].m + dimScores[dk].skip || 1;
+    const val = (dimScores[dk].s / total) * R;
+    const angle = startAngle + di * angleStep;
+    const x = cx + val * Math.cos(angle);
+    const y = cy + val * Math.sin(angle);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(231,76,60,0.18)';
+  ctx.fill();
+  ctx.strokeStyle = '#e74c3c';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Data points
+  for (let i = 0; i < count; i++) {
+    const dk = dims[i].key;
+    const total = dimScores[dk].s + dimScores[dk].m + dimScores[dk].skip || 1;
+    const val = (dimScores[dk].s / total) * R;
+    const angle = startAngle + i * angleStep;
+    const x = cx + val * Math.cos(angle);
+    const y = cy + val * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fill();
+  }
+
+  // Center
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fill();
+}
+
+function renderDimGrid(dimScores) {
+  const grid = document.getElementById('dimGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  DIMENSIONS.forEach(d => {
+    const total = dimScores[d.key].s + dimScores[d.key].m + dimScores[d.key].skip || 1;
+    const pct = Math.round((dimScores[d.key].s / total) * 100);
+    const el = document.createElement('div');
+    el.className = 'dim-item';
+    el.innerHTML = '<div class="dim-label">' + d.label + '</div>' +
+      '<div class="dim-bar"><div class="dim-fill" style="width:' + pct + '%;background:' + d.color + '"></div></div>' +
+      '<div class="dim-value" style="color:' + d.color + '">' + pct + '% S</div>';
+    grid.appendChild(el);
+  });
+}
+
+function shareResult() {
+  const title = document.getElementById('resultTitle').textContent;
+  const desc = document.getElementById('resultDesc').textContent;
+  const text = 'SM·取向测试结果\n' + title + '\n' + desc + '\nS: ' + sCount + ' / M: ' + (answered - sCount) + ' / 跳过: ' + skipCount + '\nhttps://jim6642.github.io/sm-test/';
+  if (navigator.share) {
+    navigator.share({ title: 'SM 取向测试', text: text, url: 'https://jim6642.github.io/sm-test/' });
+  } else {
+    navigator.clipboard.writeText(text).then(function() { alert('结果已复制到剪贴板'); });
+  }
 }
 function showResult() {
   const total = QUESTIONS.length, mCount = answered - sCount;
@@ -271,21 +425,35 @@ function showResult() {
   document.getElementById('statSkip').textContent = skipCount;
   document.getElementById('statTotal').textContent = total;
   let icon, title, desc;
-  if (sRatio >= 0.875) { icon = '💀'; title = '极致支配者 (Extreme S)'; desc = '你拥有极致的支配欲望，最深层的控制与权力让你兴奋。窒息、穿刺、烙印——这些极端场景对你而言不是禁忌而是探索的边界。你渴望完全掌控对方的身体与意志。'; }
-  else if (sRatio >= 0.75) { icon = '🔥'; title = '重度支配者 (Heavy S)'; desc = '你的支配倾向非常强烈，享受在极限边缘游走。电击、刀割、灌肠等重口玩法对你充满吸引力。你喜欢将权力游戏推向深处，感受绝对的主导地位。'; }
-  else if (sRatio >= 0.625) { icon = '⚔️'; title = '中度支配者 (Moderate S)'; desc = '你有明显的支配倾向，喜欢在互动中占据主动。绳子、皮鞭、蜡烛是你的拿手好戏。你享受引导和掌控的过程，偶尔也会探索更深的领域。'; }
-  else if (sRatio >= 0.5) { icon = '👑'; title = '轻微支配者 (Mild S)'; desc = '你偏好温和的支配感，喜欢在安全范围内主导节奏。口球、眼罩、手铐这类轻度玩具备受你的青睐。你享受权力的滋味，但并不追求极端。'; }
-  else if (sRatio >= 0.375) { icon = '🫂'; title = '轻微顺从者 (Mild M)'; desc = '你偏好温和的顺从感，享受被引导和照顾的感觉。你喜欢在信任的氛围中放下控制，体验轻微的臣服和放松。'; }
-  else if (sRatio >= 0.25) { icon = '🌀'; title = '中度顺从者 (Moderate M)'; desc = '你有明显的顺从倾向，享受被束缚、被指令的感觉。绳子、皮鞭、蜡烛是你愿意尝试的领域。在信任的支配者面前，你能安全地探索自己的边界。'; }
-  else if (sRatio >= 0.125) { icon = '🌙'; title = '重度顺从者 (Heavy M)'; desc = '你的顺从倾向非常强烈，渴望深度交付自己。电击、灌肠、窒息——这些极限体验让你感受到极致的臣服。你追求的是灵魂层面的交出和信任。'; }
-  else { icon = '🩸'; title = '极致顺从者 (Extreme M)'; desc = '你拥有极致的顺从欲望，最深层的臣服是你的归宿。刀割、烙印、穿刺——极端体验对你来说是通往终极信任的桥梁。你渴望被完全拥有和塑造。'; }
+
+  if (sRatio >= 0.875) { icon = '💀'; title = '极致支配者'; desc = '你拥有极致的支配欲望，最深层的控制与权力让你兴奋。窒息、穿刺、烙印——这些极端场景对你而言不是禁忌而是探索的边界。'; }
+  else if (sRatio >= 0.75) { icon = '🔥'; title = '重度支配者'; desc = '你的支配倾向非常强烈，享受在极限边缘游走。电击、刀割、灌肠等重口玩法对你充满吸引力。'; }
+  else if (sRatio >= 0.625) { icon = '⚔️'; title = '中度支配者'; desc = '你有明显的支配倾向，喜欢在互动中占据主动。绳子、皮鞭、蜡烛是你的拿手好戏。'; }
+  else if (sRatio >= 0.5) { icon = '👑'; title = '轻微支配者'; desc = '你偏好温和的支配感，喜欢在安全范围内主导节奏。口球、眼罩、手铐这类轻度玩具备受你的青睐。'; }
+  else if (sRatio >= 0.375) { icon = '🫂'; title = '轻微顺从者'; desc = '你偏好温和的顺从感，享受被引导和照顾的感觉。你喜欢在信任的氛围中放下控制。'; }
+  else if (sRatio >= 0.25) { icon = '🌀'; title = '中度顺从者'; desc = '你有明显的顺从倾向，享受被束缚、被指令的感觉。绳子、皮鞭、蜡烛是你愿意尝试的领域。'; }
+  else if (sRatio >= 0.125) { icon = '🌙'; title = '重度顺从者'; desc = '你的顺从倾向非常强烈，渴望深度交付自己。电击、灌肠、窒息——这些极限体验让你感受到极致的臣服。'; }
+  else { icon = '🩸'; title = '极致顺从者'; desc = '你拥有极致的顺从欲望，最深层的臣服是你的归宿。刀割、烙印、穿刺——极端体验对你而言是通往终极信任的桥梁。'; }
+
   document.getElementById('resultIcon').textContent = icon;
   document.getElementById('resultTitle').textContent = title;
   document.getElementById('resultDesc').textContent = desc;
+
+  // 维度分析
+  const dimScores = {};
+  DIMENSIONS.forEach(function(d) { dimScores[d.key] = { s:0, m:0, skip:0 }; });
+  for (let i = 0; i < total; i++) {
+    const dk = Q_DIMS[i];
+    if (answeredIdx[i] === 's') dimScores[dk].s++;
+    else if (answeredIdx[i] === 'm') dimScores[dk].m++;
+    else dimScores[dk].skip++;
+  }
+  renderDimGrid(dimScores);
+  renderRadar(dimScores);
   document.getElementById('resultOverlay').classList.add('active');
 }
 function restart() {
-  currentIndex = 0; sCount = 0; skipCount = 0; answered = 0; animated = false;
+  currentIndex = 0; sCount = 0; skipCount = 0; answered = 0; animated = false; answeredIdx = []; skippedSet = new Set();
   document.getElementById('dimLeft').style.opacity = '0'; document.getElementById('dimRight').style.opacity = '0';
   document.getElementById('progressDot').style.left = '50%'; document.getElementById('progressDot').textContent = '·';
   document.getElementById('resultOverlay').classList.remove('active');
